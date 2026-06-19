@@ -39,6 +39,8 @@ const initialState = () => ({
   archivedGames: [],         // last 10 completed games: {id, net, strategy, rolls}
   currentGameNet: 0,         // realized P/L since the current game began
   currentGameRolls: 0,
+  lineVolume: 0,             // total $ wagered on line/odds bets this session
+  propVolume: 0,             // total $ wagered on center-table prop bets this session
 
   // ---- trainer accuracy (resets when a trainer mode is selected) ----
   correct: 0,
@@ -88,7 +90,13 @@ export const useCrapsStore = create((set, get) => ({
       if (!verdict.onStrategy) get().pushToast(verdict.warning, "warn");
     }
 
-    set({ bankroll: res.bankroll, bets: res.bets, undoStack: res.undoStack, ...trainer });
+    // track session bet volume, split center-table props vs line/odds bets.
+    const isProp = area.startsWith("hard:") || area.startsWith("prop:");
+    const volume = isProp
+      ? { propVolume: round2(s.propVolume + s.chip) }
+      : { lineVolume: round2(s.lineVolume + s.chip) };
+
+    set({ bankroll: res.bankroll, bets: res.bets, undoStack: res.undoStack, ...trainer, ...volume });
     return true;
   },
 
@@ -101,7 +109,14 @@ export const useCrapsStore = create((set, get) => ({
     const bets = cloneBets(s.bets);
     if (last.n == null) bets[last.path] -= last.amount;
     else bets[last.path][last.n] -= last.amount;
-    set({ bets, bankroll: round2(s.bankroll + last.amount), undoStack: stack });
+
+    // roll back the volume bucket this placement counted toward.
+    const isProp = last.path === "hard" || last.path === "prop";
+    const volume = isProp
+      ? { propVolume: round2(Math.max(0, s.propVolume - last.amount)) }
+      : { lineVolume: round2(Math.max(0, s.lineVolume - last.amount)) };
+
+    set({ bets, bankroll: round2(s.bankroll + last.amount), undoStack: stack, ...volume });
     get().pushToast("Chip taken back.", "info");
   },
 
