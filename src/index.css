@@ -29,12 +29,18 @@ body {
 .display-font { font-weight: 800; letter-spacing: -0.02em; }
 
 /* ---------- felt table ---------- */
+/* The felt blends three layers over the base colour: a tiled SVG fractal-noise
+   grain (soft-light, for a fabric weave), the original top glow, and the fine
+   diagonal nap lines. */
 .felt {
   position: relative;
-  background:
+  background-color: #064e3b;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='felt-noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23felt-noise)' opacity='0.5'/%3E%3C/svg%3E"),
     radial-gradient(140% 120% at 50% 0%, rgba(16, 140, 108, .55), rgba(4, 59, 45, 0) 60%),
-    repeating-linear-gradient(45deg, rgba(255, 255, 255, .015) 0 2px, transparent 2px 6px),
-    #064e3b;
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, .015) 0 2px, transparent 2px 6px);
+  background-size: 160px 160px, auto, auto;
+  background-blend-mode: soft-light, normal, normal;
   border-radius: 22px;
   box-shadow:
     inset 0 0 0 3px rgba(0, 0, 0, .35),
@@ -105,7 +111,21 @@ body {
   background: linear-gradient(180deg, rgba(0, 0, 0, .2), rgba(0, 0, 0, .3));
   box-shadow: inset 0 0 22px rgba(0, 0, 0, .35);
 }
-.bet.prop { border-color: rgba(233, 196, 106, .4); }
+.bet.prop {
+  border-color: rgba(233, 196, 106, .4);
+  transition: transform .12s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease, filter .2s ease;
+}
+/* Clear hitbox feedback: lift the zone with a gold drop-shadow on hover/focus. */
+.bet.prop:hover {
+  border-color: rgba(246, 216, 137, .95);
+  box-shadow: 0 0 0 2px rgba(246, 216, 137, .35), 0 8px 20px rgba(0, 0, 0, .5);
+  filter: drop-shadow(0 4px 10px rgba(246, 216, 137, .3));
+}
+.bet.prop:focus-visible {
+  outline: none;
+  border-color: var(--gold-bright);
+  box-shadow: 0 0 0 3px rgba(246, 216, 137, .6), 0 8px 22px rgba(0, 0, 0, .55);
+}
 .bet.prop .chipstack { left: 50%; transform: translateX(-50%); bottom: 4px; max-width: 90%; justify-content: center; }
 
 /* ---------- dealer puck ---------- */
@@ -179,11 +199,22 @@ body {
   bottom: 8px;
   max-width: 72%;
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-wrap: wrap;
+  align-items: flex-end;
   pointer-events: none;
   z-index: 5;
 }
+/* A single bet's physical pile: chips are absolutely stacked, each nudged up and
+   wobbled by ChipStack.jsx so the tower reads like hand-placed chips. */
+.chip-pile {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  flex: none;
+}
+.chip-pile .chip { position: absolute; left: 0; bottom: 0; }
+.chip-pile .chip.odds { left: 2px; }
 .chip {
   --c: #475569;
   --c2: #1e293b;

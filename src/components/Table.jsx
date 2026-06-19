@@ -5,31 +5,9 @@ import { BOXES, HARD_PAYOUT, PROP_PAYOUT } from "../engine/CrapsMath.js";
 import { nextTask } from "../engine/TrainerLogic.js";
 import Dice from "./Dice.jsx";
 import Puck from "./Puck.jsx";
+import ChipStack from "./ChipStack.jsx";
 
 const BOX_LABEL = { 4: "FOUR", 5: "FIVE", 6: "SIX", 8: "EIGHT", 9: "NINE", 10: "TEN" };
-
-function chipClass(v) {
-  return v >= 100 ? "chip-100" : v >= 25 ? "chip-25" : "chip-5";
-}
-
-// A small stack of chips rendered absolutely in the bottom-left of an area.
-function ChipStack({ items }) {
-  const visible = items.filter((it) => it.v > 0);
-  if (!visible.length) return null;
-  return (
-    <div className="chipstack">
-      {visible.map((it, i) => (
-        <div
-          key={i}
-          className={`chip ${it.odds ? "odds chip-gold" : chipClass(it.v)}`}
-          title={it.title || ""}
-        >
-          {it.v >= 1000 ? it.v / 1000 + "k" : it.v}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function Table() {
   const bets = useCrapsStore((s) => s.bets);
@@ -114,8 +92,14 @@ export default function Table() {
     return (
       <div
         id={id}
+        role="button"
+        tabIndex={0}
+        aria-label={`${label}, pays ${payTo} to 1`}
         className={cls(id, "bet prop h-14 flex flex-col items-center justify-center text-center")}
         onClick={() => placeBet(area)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); placeBet(area); }
+        }}
       >
         <div className="lbl display-font text-[13px] leading-none">{label}</div>
         <div className="lbl text-[9px] tracking-wider text-emerald-200/55 mt-0.5">{payTo}:1</div>
