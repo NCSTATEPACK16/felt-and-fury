@@ -1,0 +1,192 @@
+// src/components/Table.jsx
+import { useEffect, useState } from "react";
+import { useCrapsStore } from "../store/useCrapsStore.js";
+import { BOXES } from "../engine/CrapsMath.js";
+import { nextTask } from "../engine/TrainerLogic.js";
+import Dice from "./Dice.jsx";
+
+const BOX_LABEL = { 4: "FOUR", 5: "FIVE", 6: "SIX", 8: "EIGHT", 9: "NINE", 10: "TEN" };
+
+function chipClass(v) {
+  return v >= 100 ? "chip-100" : v >= 25 ? "chip-25" : "chip-5";
+}
+
+// A small stack of chips rendered absolutely in the bottom-left of an area.
+function ChipStack({ items }) {
+  const visible = items.filter((it) => it.v > 0);
+  if (!visible.length) return null;
+  return (
+    <div className="chipstack">
+      {visible.map((it, i) => (
+        <div
+          key={i}
+          className={`chip ${it.odds ? "odds chip-gold" : chipClass(it.v)}`}
+          title={it.title || ""}
+        >
+          {it.v >= 1000 ? it.v / 1000 + "k" : it.v}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function Table() {
+  const bets = useCrapsStore((s) => s.bets);
+  const point = useCrapsStore((s) => s.point);
+  const mode = useCrapsStore((s) => s.mode);
+  const rollTotal = useCrapsStore((s) => (s.rollLog.length ? s.rollLog[0] : null));
+  const lastWord = useCrapsStore((s) => s.lastWord);
+  const lastEvents = useCrapsStore((s) => s.lastEvents);
+  const rollId = useCrapsStore((s) => s.rollId);
+  const placeBet = useCrapsStore((s) => s.placeBet);
+  const pushToast = useCrapsStore((s) => s.pushToast);
+
+  // win/lose flashes keyed off each resolved roll
+  const [flash, setFlash] = useState({});
+  useEffect(() => {
+    if (!rollId) return;
+    const map = {};
+    for (const e of lastEvents) {
+      if (e.kind === "win" || e.kind === "lose") map[e.area] = e.kind;
+    }
+    setFlash(map);
+    const t = setTimeout(() => setFlash({}), 900);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollId]);
+
+  const task = mode === "manual" ? null : nextTask({ mode, point, bets });
+  const highlightId = task && task.area ? task.boxId || task.area : null;
+
+  const cls = (id, base) => {
+    const f = flash[id] === "win" ? " flash-win" : flash[id] === "lose" ? " flash-lose" : "";
+    const h = highlightId === id ? " highlight" : "";
+    return base + f + h;
+  };
+
+  const clickBox = (n) => {
+    let area = bets.comeNum[n] > 0 ? "comeOdds:" + n : bets.dcNum[n] > 0 ? "dcOdds:" + n : null;
+    if (!area) {
+      pushToast(`No Come / Don't Come point on ${n} yet to back with odds.`, "warn");
+      return;
+    }
+    placeBet(area);
+  };
+
+  return (
+    <section className="rail">
+      <div className="felt p-3 sm:p-5">
+        {/* number boxes */}
+        <div className="grid grid-cols-6 gap-2 mb-3">
+          {BOXES.map((n) => (
+            <div
+              key={n}
+              id={"box-" + n}
+              className={cls("box-" + n, "bet h-24 flex flex-col items-center justify-center")}
+              onClick={() => clickBox(n)}
+            >
+              <div className="lbl display-font text-2xl leading-none">{n}</div>
+              <div className="lbl text-[9px] tracking-[.18em] text-emerald-200/55">{BOX_LABEL[n]}</div>
+              <ChipStack
+                items={[
+                  { v: bets.comeNum[n], title: "Come point" },
+                  { v: bets.comeOdds[n], odds: true, title: "Come odds" },
+                  { v: bets.dcNum[n], title: "Don't Come" },
+                  { v: bets.dcOdds[n], odds: true, title: "Lay odds" },
+                ]}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* come */}
+        <div
+          id="come"
+          className={cls("come", "bet h-16 mb-2 flex items-center justify-center")}
+          onClick={() => placeBet("come")}
+        >
+          <div className="lbl text-center">
+            <div className="display-font text-xl tracking-[.2em]">C O M E</div>
+            <div className="text-[10px] text-emerald-200/60">wins 7·11 · travels to box</div>
+          </div>
+          <ChipStack items={[{ v: bets.come }]} />
+        </div>
+
+        {/* don't come */}
+        <div
+          id="dontCome"
+          className={cls("dontCome", "bet dark h-12 mb-3 flex items-center justify-center")}
+          onClick={() => placeBet("dontCome")}
+        >
+          <div className="lbl text-center">
+            <div className="display-font text-sm tracking-[.18em] text-rose-200">
+              DON'T COME <span className="text-rose-300/70">· bar 12</span>
+            </div>
+          </div>
+          <ChipStack items={[{ v: bets.dontCome }]} />
+        </div>
+
+        {/* don't pass + lay odds */}
+        <div
+          id="dontPass"
+          className={cls("dontPass", "bet dark h-14 mb-2 flex items-center justify-between px-4")}
+          onClick={() => placeBet("dontPass")}
+        >
+          <div className="lbl">
+            <div className="display-font text-base tracking-[.14em] text-rose-200">DON'T PASS BAR</div>
+            <div className="text-[10px] text-rose-300/60">wins 2·3 · push 12 · loses 7·11</div>
+          </div>
+          <div
+            id="dontPassOdds"
+            className={cls("dontPassOdds", "bet dark h-10 w-24 flex items-center justify-center rounded-lg")}
+            onClick={(e) => { e.stopPropagation(); placeBet("dontPassOdds"); }}
+          >
+            <span className="lbl text-[10px] tracking-wider text-rose-200/80">LAY ODDS</span>
+            <ChipStack items={[{ v: bets.dontPassOdds, odds: true }]} />
+          </div>
+          <ChipStack items={[{ v: bets.dontPass }]} />
+        </div>
+
+        {/* pass line + take odds */}
+        <div
+          id="passLine"
+          className={cls("passLine", "bet h-16 flex items-center justify-between px-4")}
+          onClick={() => placeBet("passLine")}
+        >
+          <div className="lbl">
+            <div className="display-font text-lg tracking-[.16em] text-[color:var(--gold)]">PASS LINE</div>
+            <div className="text-[10px] text-emerald-200/60">wins 7·11 · loses 2·3·12 · sets point</div>
+          </div>
+          <div
+            id="passOdds"
+            className={cls("passOdds", "bet h-11 w-24 flex items-center justify-center rounded-lg")}
+            onClick={(e) => { e.stopPropagation(); placeBet("passOdds"); }}
+          >
+            <span className="lbl text-[10px] tracking-wider text-emerald-100/80">TAKE ODDS</span>
+            <ChipStack items={[{ v: bets.passOdds, odds: true }]} />
+          </div>
+          {point !== null && <div className="pointmark">POINT {point}</div>}
+          <ChipStack items={[{ v: bets.passLine }]} />
+        </div>
+
+        {/* dice + odds hint */}
+        <div className="mt-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <Dice />
+            <div className="leading-tight">
+              <div className="digital text-3xl font-bold">{rollTotal ?? "—"}</div>
+              <div className="text-[11px] text-emerald-200/70 uppercase tracking-wider">
+                {lastWord || "roll the dice"}
+              </div>
+            </div>
+          </div>
+          <div className="text-[11px] text-emerald-200/60 max-w-[230px]">
+            Odds pay true: <span className="text-[color:var(--gold)]">2:1</span> on 4/10,{" "}
+            <span className="text-[color:var(--gold)]">3:2</span> on 5/9,{" "}
+            <span className="text-[color:var(--gold)]">6:5</span> on 6/8.
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
