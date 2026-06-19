@@ -7,7 +7,6 @@ import { formatMoney } from "./engine/CrapsMath.js";
 
 function Header() {
   const bankroll = useCrapsStore((s) => s.bankroll);
-  const point = useCrapsStore((s) => s.point);
   const rollLog = useCrapsStore((s) => s.rollLog);
   const reset = useCrapsStore((s) => s.reset);
   const risk = useCrapsStore(selectAtRisk);
@@ -31,7 +30,7 @@ function Header() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
         <div className="readout rounded-xl px-4 py-3">
           <div className="text-[10px] uppercase tracking-[.15em] text-emerald-200/60">Bankroll</div>
           <div className="digital text-2xl sm:text-3xl font-bold text-[color:var(--gold)]">{formatMoney(bankroll)}</div>
@@ -39,12 +38,6 @@ function Header() {
         <div className="readout rounded-xl px-4 py-3">
           <div className="text-[10px] uppercase tracking-[.15em] text-emerald-200/60">At risk</div>
           <div className="digital text-2xl sm:text-3xl font-bold">{formatMoney(risk)}</div>
-        </div>
-        <div className="readout rounded-xl px-4 py-3">
-          <div className="text-[10px] uppercase tracking-[.15em] text-emerald-200/60">Point</div>
-          <div className="digital text-2xl sm:text-3xl font-bold">
-            {point === null ? "OFF" : <>ON <span className="text-[color:var(--gold)]">{point}</span></>}
-          </div>
         </div>
         <div className="readout rounded-xl px-4 py-3 col-span-2 lg:col-span-1">
           <div className="text-[10px] uppercase tracking-[.15em] text-emerald-200/60">Last 5 rolls</div>

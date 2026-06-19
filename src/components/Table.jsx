@@ -1,9 +1,10 @@
 // src/components/Table.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCrapsStore } from "../store/useCrapsStore.js";
 import { BOXES } from "../engine/CrapsMath.js";
 import { nextTask } from "../engine/TrainerLogic.js";
 import Dice from "./Dice.jsx";
+import Puck from "./Puck.jsx";
 
 const BOX_LABEL = { 4: "FOUR", 5: "FIVE", 6: "SIX", 8: "EIGHT", 9: "NINE", 10: "TEN" };
 
@@ -33,6 +34,7 @@ function ChipStack({ items }) {
 export default function Table() {
   const bets = useCrapsStore((s) => s.bets);
   const point = useCrapsStore((s) => s.point);
+  const puckPosition = useCrapsStore((s) => s.puckPosition);
   const mode = useCrapsStore((s) => s.mode);
   const rollTotal = useCrapsStore((s) => (s.rollLog.length ? s.rollLog[0] : null));
   const lastWord = useCrapsStore((s) => s.lastWord);
@@ -55,6 +57,37 @@ export default function Table() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rollId]);
 
+  // ---- dealer puck positioning ----
+  // A single absolutely-positioned puck glides between its OFF home (rail) and
+  // the top corner of the established point's number box. We measure the target
+  // relative to the felt and move the puck with a transform, so CSS animates it.
+  const feltRef = useRef(null);
+  const offHomeRef = useRef(null);
+  const boxRefs = useRef({});
+  const [puckXY, setPuckXY] = useState(null);
+
+  useLayoutEffect(() => {
+    const felt = feltRef.current;
+    if (!felt) return;
+
+    const measure = () => {
+      const target = puckPosition == null ? offHomeRef.current : boxRefs.current[puckPosition];
+      if (!target) return;
+      const f = felt.getBoundingClientRect();
+      const t = target.getBoundingClientRect();
+      // Sit flush over the OFF home ring; tuck into the top-left corner of a box.
+      const inset = puckPosition == null ? 0 : 6;
+      setPuckXY({ left: t.left - f.left + inset, top: t.top - f.top + inset });
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(felt);
+    return () => ro.disconnect();
+  }, [puckPosition]);
+
   const task = mode === "manual" ? null : nextTask({ mode, point, bets });
   const highlightId = task && task.area ? task.boxId || task.area : null;
 
@@ -75,13 +108,22 @@ export default function Table() {
 
   return (
     <section className="rail">
-      <div className="felt p-3 sm:p-5">
+      <div ref={feltRef} className="felt p-3 sm:p-5">
+        {/* dealer puck rail — the puck's OFF home lives here during the come-out */}
+        <div className="puck-rail">
+          <div ref={offHomeRef} className="puck-home" aria-hidden="true" />
+          <div className="text-[10px] uppercase tracking-[.2em] text-emerald-200/45">
+            Dealer puck · marks the point
+          </div>
+        </div>
+
         {/* number boxes */}
         <div className="grid grid-cols-6 gap-2 mb-3">
           {BOXES.map((n) => (
             <div
               key={n}
               id={"box-" + n}
+              ref={(el) => { boxRefs.current[n] = el; }}
               className={cls("box-" + n, "bet h-24 flex flex-col items-center justify-center")}
               onClick={() => clickBox(n)}
             >
@@ -165,7 +207,6 @@ export default function Table() {
             <span className="lbl text-[10px] tracking-wider text-emerald-100/80">TAKE ODDS</span>
             <ChipStack items={[{ v: bets.passOdds, odds: true }]} />
           </div>
-          {point !== null && <div className="pointmark">POINT {point}</div>}
           <ChipStack items={[{ v: bets.passLine }]} />
         </div>
 
@@ -186,6 +227,16 @@ export default function Table() {
             <span className="text-[color:var(--gold)]">6:5</span> on 6/8.
           </div>
         </div>
+
+        {/* dealer puck — moved via transform, glides between OFF home and the point box */}
+        {puckXY && (
+          <div
+            className="puck-layer"
+            style={{ transform: `translate(${puckXY.left}px, ${puckXY.top}px)` }}
+          >
+            <Puck on={puckPosition != null} />
+          </div>
+        )}
       </div>
     </section>
   );
