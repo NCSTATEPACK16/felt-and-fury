@@ -30,6 +30,7 @@ body {
 
 /* ---------- felt table ---------- */
 .felt {
+  position: relative;
   background:
     radial-gradient(140% 120% at 50% 0%, rgba(16, 140, 108, .55), rgba(4, 59, 45, 0) 60%),
     repeating-linear-gradient(45deg, rgba(255, 255, 255, .015) 0 2px, transparent 2px 6px),
@@ -95,6 +96,70 @@ body {
   0% { box-shadow: 0 0 0 0 rgba(226, 59, 84, 0); }
   30% { box-shadow: 0 0 0 5px rgba(226, 59, 84, .75), 0 0 30px rgba(226, 59, 84, .7); }
   100% { box-shadow: 0 0 0 0 rgba(226, 59, 84, 0); }
+}
+
+/* ---------- dealer puck ---------- */
+.puck-rail {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+.puck-home {
+  width: 46px;
+  height: 46px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, .22);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .35);
+}
+
+/* The mover: absolutely positioned, glides between OFF home and the point box. */
+.puck-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  pointer-events: none;
+  transition: transform .5s cubic-bezier(.34, 1.18, .4, 1);
+  will-change: transform;
+}
+
+/* The coin: a 3D flip between the white ON face and the black OFF face. */
+.puck {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  transform-style: preserve-3d;
+  transition: transform .5s ease;
+  transform: rotateY(180deg); /* default OFF shows the back face */
+}
+.puck.on { transform: rotateY(0deg); } /* ON shows the front face */
+.puck-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .06em;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .55), inset 0 -3px 6px rgba(0, 0, 0, .35), inset 0 2px 4px rgba(255, 255, 255, .35);
+}
+.puck-face.front {
+  background: radial-gradient(circle at 38% 30%, #ffffff, #dfe5ec 62%, #b3bcc6 100%);
+  color: #0b0f14;
+  border: 3px solid #c7cdd5;
+}
+.puck-face.back {
+  background: radial-gradient(circle at 38% 30%, #333b45, #14191f 62%, #05070a 100%);
+  color: #f1f5f9;
+  border: 3px solid #2b3138;
+  transform: rotateY(180deg);
 }
 
 /* ---------- chips ---------- */
@@ -207,4 +272,5 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .highlight, .flash-win, .flash-lose, .rolling, .toast { animation: none !important; }
+  .puck-layer, .puck { transition: none !important; }
 }

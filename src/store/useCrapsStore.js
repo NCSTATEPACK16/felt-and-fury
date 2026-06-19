@@ -19,6 +19,7 @@ const emptyDistribution = () => ({ 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 
 const initialState = () => ({
   bankroll: START_BANKROLL,
   point: null,
+  puckPosition: null,        // null = OFF (come-out); 4/5/6/8/9/10 = ON, marks the point
   mode: "manual",            // manual | molly | dolly
   chip: 5,
   bets: emptyBets(),
@@ -147,6 +148,7 @@ export const useCrapsStore = create((set, get) => ({
         dice: [d1, d2],
         bets: out.bets,
         point: out.point,
+        puckPosition: out.point,   // puck follows the point: ON over the number, or OFF when null
         lastEvents: out.events,
         lastWord: out.word,
         rollId: ++rollSeq,
