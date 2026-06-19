@@ -91,7 +91,7 @@ sacrifice legibility or touch-target size for flourish.
 
 ## 4. Phase roadmap
 
-Status: `[ ]` not started · `[~]` in progress · `[x]` merged. **Current focus → Phase 5.**
+Status: `[ ]` not started · `[~]` in progress · `[x]` merged. **Current focus → Phase 6.**
 
 | # | Phase | Status | Acceptance |
 |---|-------|--------|------------|
@@ -99,7 +99,7 @@ Status: `[ ]` not started · `[~]` in progress · `[x]` merged. **Current focus 
 | 2 | Center-table prop bets | `[x]` | Hardways + one-roll bets resolve at true odds |
 | 3 | Tactile chips, felt texture, prop hitboxes | `[x]` | Physical chip stacks; fabric felt; hover/focus |
 | 4 | Line-vs-prop analytics + Netlify | `[x]` | Bet-mix donut; `netlify.toml` |
-| 5 | Design system & motion foundation | `[ ]` | Tokens drive components; no regressions; this doc exists |
+| 5 | Design system & motion foundation | `[x]` | Tokens drive components; no regressions; this doc exists |
 | 6 | Responsive app shell (iPhone 15 PM + PC) | `[ ]` | No overflow / Dynamic-Island overlap; desktop ≥ today |
 | 7 | Tactile board & chip motion | `[ ]` | Spring placements/resolutions; reduced-motion snaps; 60fps |
 | 8 | 3D dice + sound + haptics | `[ ]` | Dice land on real face; cues + toggles persist |
@@ -202,4 +202,7 @@ SPA redirect), so connecting the repo is nearly zero-config.
 - **Phase 2** — Center-table proposition bets + analytics/trainer fixes (PR #2).
 - **Phase 3** — Tactile chip stacks, felt texture, prop hitbox polish (PR #3).
 - **Phase 4** — Line-vs-prop analytics + Netlify deploy config (PR #4).
-- _Add one line here per merged modernization phase (5–14)._
+- **Phase 5** — Design-system tokens (palette/glass/radii/shadow/motion), Tailwind token + safe-area
+  utilities, iOS viewport/`100dvh`/safe-area handling, `motion` installed, `.npmrc`
+  (legacy-peer-deps for the vite@8 build).
+- _Add one line here per merged modernization phase (6–14)._

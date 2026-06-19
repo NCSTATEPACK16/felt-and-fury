@@ -3,12 +3,54 @@
 @tailwind utilities;
 
 :root {
+  /* ---- brand accents (existing) ---- */
   --gold: #e9c46a;
   --gold-bright: #f6d889;
   --gold-deep: #b8893b;
   --crimson: #e23b54;
   --win: #36d399;
   --felt: #064e3b;
+
+  /* ---- semantic accents ---- */
+  --accent: var(--gold);
+  --accent-bright: var(--gold-bright);
+  --lose: var(--crimson);
+  --info: #38bdf8;
+
+  /* ---- dark app chrome (consumed by the Phase 6 shell) ---- */
+  --bg: #05140f;
+  --surface: rgba(2, 15, 11, .7);
+  --surface-2: rgba(2, 15, 11, .5);
+  --border: rgba(233, 196, 106, .25);
+  --text: #f8fafc;
+  --text-dim: rgba(226, 232, 240, .65);
+
+  /* ---- glass ---- */
+  --glass-bg: rgba(8, 24, 19, .55);
+  --glass-border: rgba(255, 255, 255, .12);
+  --glass-blur: 14px;
+
+  /* ---- radii ---- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  /* ---- spacing step ---- */
+  --space: 4px;
+
+  /* ---- shadows ---- */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, .4);
+  --shadow-md: 0 12px 30px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 24px 60px rgba(0, 0, 0, .5);
+  --glow-gold: 0 0 24px rgba(246, 216, 137, .45);
+
+  /* ---- motion tokens ---- */
+  --dur-fast: .12s;
+  --dur-base: .25s;
+  --dur-slow: .5s;
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-spring: cubic-bezier(.34, 1.2, .4, 1);
 }
 
 html { -webkit-text-size-adjust: 100%; }
@@ -16,10 +58,14 @@ html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  color: #f8fafc;
+  color: var(--text);
   background:
     radial-gradient(120% 80% at 50% -10%, #0a6e55 0%, #064e3b 48%, #043b2d 100%);
-  min-height: 100vh;
+  min-height: 100vh;       /* fallback */
+  min-height: 100dvh;      /* dynamic viewport — avoids iOS Safari toolbar jump */
+  /* full-bleed background, content respects the notch / Dynamic Island / home bar */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .digital {
@@ -309,7 +355,15 @@ body {
 @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 /* ---------- misc ---------- */
-.readout { background: linear-gradient(180deg, rgba(2, 15, 11, .7), rgba(2, 15, 11, .5)); border: 1px solid rgba(233, 196, 106, .25); }
+.readout { background: linear-gradient(180deg, var(--surface), var(--surface-2)); border: 1px solid var(--border); }
+
+/* glass panel utility for the modern app shell (Phase 6+) */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+}
 
 @media (prefers-reduced-motion: reduce) {
   .highlight, .flash-win, .flash-lose, .rolling, .toast { animation: none !important; }
