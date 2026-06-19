@@ -1,16 +1,27 @@
 // src/components/AnalyticsDashboard.jsx
 import {
   BarChart, Bar, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer, ReferenceLine, CartesianGrid,
+  PieChart, Pie, Legend,
 } from "recharts";
 import {
   useCrapsStore, selectAverageRoll, selectAccuracy,
 } from "../store/useCrapsStore.js";
-import { formatMoney } from "../engine/CrapsMath.js";
+import { formatMoney, round2 } from "../engine/CrapsMath.js";
 
 const GOLD = "#e9c46a";
 const CRIMSON = "#e23b54";
 const WIN = "#36d399";
 const AXIS = "#9fb3ab";
+const PROP = "#c084fc"; // prop-bet volume slice
+
+// Compact currency for axis ticks so big center-table swings stay readable
+// (e.g. -$1.2k instead of -$1,250).
+function compactMoney(v) {
+  const neg = v < 0;
+  const a = Math.abs(v);
+  const s = a >= 1000 ? (a / 1000).toFixed(a % 1000 === 0 ? 0 : 1) + "k" : String(round2(a));
+  return (neg ? "-$" : "$") + s;
+}
 
 const tooltipStyle = {
   background: "#08201a",
@@ -56,6 +67,8 @@ export default function AnalyticsDashboard() {
   const peak = useCrapsStore((s) => s.peak);
   const games = useCrapsStore((s) => s.archivedGames);
   const mode = useCrapsStore((s) => s.mode);
+  const lineVolume = useCrapsStore((s) => s.lineVolume);
+  const propVolume = useCrapsStore((s) => s.propVolume);
   const avgRoll = useCrapsStore(selectAverageRoll);
   const accuracy = useCrapsStore(selectAccuracy);
 
@@ -67,6 +80,13 @@ export default function AnalyticsDashboard() {
     net: g.net,
     strategy: g.strategy,
   }));
+
+  const totalVolume = round2(lineVolume + propVolume);
+  const mixData = [
+    { name: "Line & odds", value: lineVolume, fill: GOLD },
+    { name: "Center props", value: propVolume, fill: PROP },
+  ].filter((d) => d.value > 0);
+  const propShare = totalVolume > 0 ? Math.round((100 * propVolume) / totalVolume) : 0;
 
   const accuracyDisplay = mode === "manual" && accuracy === null ? "—" : accuracy === null ? "—" : accuracy + "%";
 
@@ -120,8 +140,9 @@ export default function AnalyticsDashboard() {
               <YAxis
                 tick={{ fill: AXIS, fontSize: 12 }}
                 stroke="rgba(255,255,255,.2)"
-                width={64}
-                tickFormatter={(v) => formatMoney(v)}
+                width={56}
+                domain={[(min) => Math.min(0, min), (max) => Math.max(0, max)]}
+                tickFormatter={compactMoney}
               />
               <Tooltip
                 contentStyle={tooltipStyle}
@@ -137,6 +158,49 @@ export default function AnalyticsDashboard() {
             </BarChart>
           </ResponsiveContainer>
         </ChartShell>
+
+        <div className="lg:col-span-2">
+          <ChartShell
+            title="Bet mix · line vs prop volume"
+            subtitle={totalVolume > 0 ? `${propShare}% on center props` : ""}
+            empty={totalVolume === 0}
+            emptyMsg="Place bets to see how your wagered volume splits between line/odds bets and high-variance center-table props."
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={mixData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={45}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  stroke="rgba(0,0,0,.35)"
+                >
+                  {mixData.map((d) => (
+                    <Cell key={d.name} fill={d.fill} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(value, name) => [
+                    `${formatMoney(value)} · ${totalVolume > 0 ? Math.round((100 * value) / totalVolume) : 0}%`,
+                    name,
+                  ]}
+                />
+                <Legend
+                  verticalAlign="middle"
+                  align="right"
+                  layout="vertical"
+                  iconType="circle"
+                  formatter={(v) => <span style={{ color: AXIS, fontSize: 12 }}>{v}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </ChartShell>
+        </div>
       </div>
     </section>
   );

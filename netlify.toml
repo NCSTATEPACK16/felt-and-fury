@@ -1,0 +1,15 @@
+# Netlify deploy configuration for Felt & Fury (Vite single-page app).
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# SPA fallback: serve the built index.html for any path so client-side routing
+# and deep links resolve instead of 404-ing.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
