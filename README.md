@@ -7,6 +7,10 @@ dashboard charts roll distribution and per-game ROI.
 
 **Stack:** React 18 · Vite 5 · Zustand 4 · Recharts 2 · Tailwind 3
 
+> 🛠️ **Roadmap:** the dicer.io-class modernization (phases 5–14: modern app shell, 3D dice,
+> sound/haptics, Strategy Builder, Monte-Carlo simulator, PWA) is tracked in
+> [`docs/MODERNIZATION.md`](docs/MODERNIZATION.md) — the living spec the build agent iterates on.
+
 ---
 
 ## Run it
