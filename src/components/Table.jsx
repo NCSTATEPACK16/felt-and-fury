@@ -1,7 +1,7 @@
 // src/components/Table.jsx
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCrapsStore } from "../store/useCrapsStore.js";
-import { BOXES } from "../engine/CrapsMath.js";
+import { BOXES, HARD_PAYOUT, PROP_PAYOUT } from "../engine/CrapsMath.js";
 import { nextTask } from "../engine/TrainerLogic.js";
 import Dice from "./Dice.jsx";
 import Puck from "./Puck.jsx";
@@ -106,6 +106,24 @@ export default function Table() {
     placeBet(area);
   };
 
+  // A center-table proposition zone (hardway or one-roll bet).
+  const propZone = (id, area, label, payTo) => {
+    const value = id.startsWith("hard-")
+      ? bets.hard[Number(id.slice(5))]
+      : bets.prop[area.slice(area.indexOf(":") + 1)];
+    return (
+      <div
+        id={id}
+        className={cls(id, "bet prop h-14 flex flex-col items-center justify-center text-center")}
+        onClick={() => placeBet(area)}
+      >
+        <div className="lbl display-font text-[13px] leading-none">{label}</div>
+        <div className="lbl text-[9px] tracking-wider text-emerald-200/55 mt-0.5">{payTo}:1</div>
+        <ChipStack items={[{ v: value }]} />
+      </div>
+    );
+  };
+
   return (
     <section className="rail">
       <div ref={feltRef} className="felt p-3 sm:p-5">
@@ -117,97 +135,122 @@ export default function Table() {
           </div>
         </div>
 
-        {/* number boxes */}
-        <div className="grid grid-cols-6 gap-2 mb-3">
-          {BOXES.map((n) => (
+        {/* main play area: line/come/number grid (left) + center prop table (right) */}
+        <div className="grid lg:grid-cols-[1fr_180px] gap-3 items-start">
+          <div>
+            {/* number boxes */}
+            <div className="grid grid-cols-6 gap-2 mb-3">
+              {BOXES.map((n) => (
+                <div
+                  key={n}
+                  id={"box-" + n}
+                  ref={(el) => { boxRefs.current[n] = el; }}
+                  className={cls("box-" + n, "bet h-24 flex flex-col items-center justify-center")}
+                  onClick={() => clickBox(n)}
+                >
+                  <div className="lbl display-font text-2xl leading-none">{n}</div>
+                  <div className="lbl text-[9px] tracking-[.18em] text-emerald-200/55">{BOX_LABEL[n]}</div>
+                  <ChipStack
+                    items={[
+                      { v: bets.comeNum[n], title: "Come point" },
+                      { v: bets.comeOdds[n], odds: true, title: "Come odds" },
+                      { v: bets.dcNum[n], title: "Don't Come" },
+                      { v: bets.dcOdds[n], odds: true, title: "Lay odds" },
+                    ]}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* come */}
             <div
-              key={n}
-              id={"box-" + n}
-              ref={(el) => { boxRefs.current[n] = el; }}
-              className={cls("box-" + n, "bet h-24 flex flex-col items-center justify-center")}
-              onClick={() => clickBox(n)}
+              id="come"
+              className={cls("come", "bet h-16 mb-2 flex items-center justify-center")}
+              onClick={() => placeBet("come")}
             >
-              <div className="lbl display-font text-2xl leading-none">{n}</div>
-              <div className="lbl text-[9px] tracking-[.18em] text-emerald-200/55">{BOX_LABEL[n]}</div>
-              <ChipStack
-                items={[
-                  { v: bets.comeNum[n], title: "Come point" },
-                  { v: bets.comeOdds[n], odds: true, title: "Come odds" },
-                  { v: bets.dcNum[n], title: "Don't Come" },
-                  { v: bets.dcOdds[n], odds: true, title: "Lay odds" },
-                ]}
-              />
+              <div className="lbl text-center">
+                <div className="display-font text-xl tracking-[.2em]">C O M E</div>
+                <div className="text-[10px] text-emerald-200/60">wins 7·11 · travels to box</div>
+              </div>
+              <ChipStack items={[{ v: bets.come }]} />
             </div>
-          ))}
-        </div>
 
-        {/* come */}
-        <div
-          id="come"
-          className={cls("come", "bet h-16 mb-2 flex items-center justify-center")}
-          onClick={() => placeBet("come")}
-        >
-          <div className="lbl text-center">
-            <div className="display-font text-xl tracking-[.2em]">C O M E</div>
-            <div className="text-[10px] text-emerald-200/60">wins 7·11 · travels to box</div>
-          </div>
-          <ChipStack items={[{ v: bets.come }]} />
-        </div>
+            {/* don't come */}
+            <div
+              id="dontCome"
+              className={cls("dontCome", "bet dark h-12 mb-3 flex items-center justify-center")}
+              onClick={() => placeBet("dontCome")}
+            >
+              <div className="lbl text-center">
+                <div className="display-font text-sm tracking-[.18em] text-rose-200">
+                  DON'T COME <span className="text-rose-300/70">· bar 12</span>
+                </div>
+              </div>
+              <ChipStack items={[{ v: bets.dontCome }]} />
+            </div>
 
-        {/* don't come */}
-        <div
-          id="dontCome"
-          className={cls("dontCome", "bet dark h-12 mb-3 flex items-center justify-center")}
-          onClick={() => placeBet("dontCome")}
-        >
-          <div className="lbl text-center">
-            <div className="display-font text-sm tracking-[.18em] text-rose-200">
-              DON'T COME <span className="text-rose-300/70">· bar 12</span>
+            {/* don't pass + lay odds */}
+            <div
+              id="dontPass"
+              className={cls("dontPass", "bet dark h-14 mb-2 flex items-center justify-between px-4")}
+              onClick={() => placeBet("dontPass")}
+            >
+              <div className="lbl">
+                <div className="display-font text-base tracking-[.14em] text-rose-200">DON'T PASS BAR</div>
+                <div className="text-[10px] text-rose-300/60">wins 2·3 · push 12 · loses 7·11</div>
+              </div>
+              <div
+                id="dontPassOdds"
+                className={cls("dontPassOdds", "bet dark h-10 w-24 flex items-center justify-center rounded-lg")}
+                onClick={(e) => { e.stopPropagation(); placeBet("dontPassOdds"); }}
+              >
+                <span className="lbl text-[10px] tracking-wider text-rose-200/80">LAY ODDS</span>
+                <ChipStack items={[{ v: bets.dontPassOdds, odds: true }]} />
+              </div>
+              <ChipStack items={[{ v: bets.dontPass }]} />
+            </div>
+
+            {/* pass line + take odds */}
+            <div
+              id="passLine"
+              className={cls("passLine", "bet h-16 flex items-center justify-between px-4")}
+              onClick={() => placeBet("passLine")}
+            >
+              <div className="lbl">
+                <div className="display-font text-lg tracking-[.16em] text-[color:var(--gold)]">PASS LINE</div>
+                <div className="text-[10px] text-emerald-200/60">wins 7·11 · loses 2·3·12 · sets point</div>
+              </div>
+              <div
+                id="passOdds"
+                className={cls("passOdds", "bet h-11 w-24 flex items-center justify-center rounded-lg")}
+                onClick={(e) => { e.stopPropagation(); placeBet("passOdds"); }}
+              >
+                <span className="lbl text-[10px] tracking-wider text-emerald-100/80">TAKE ODDS</span>
+                <ChipStack items={[{ v: bets.passOdds, odds: true }]} />
+              </div>
+              <ChipStack items={[{ v: bets.passLine }]} />
             </div>
           </div>
-          <ChipStack items={[{ v: bets.dontCome }]} />
-        </div>
 
-        {/* don't pass + lay odds */}
-        <div
-          id="dontPass"
-          className={cls("dontPass", "bet dark h-14 mb-2 flex items-center justify-between px-4")}
-          onClick={() => placeBet("dontPass")}
-        >
-          <div className="lbl">
-            <div className="display-font text-base tracking-[.14em] text-rose-200">DON'T PASS BAR</div>
-            <div className="text-[10px] text-rose-300/60">wins 2·3 · push 12 · loses 7·11</div>
+          {/* center table — proposition bets */}
+          <div className="center-table flex flex-col gap-2 p-2">
+            <div className="text-[9px] uppercase tracking-[.2em] text-emerald-200/45 text-center">
+              Center table
+            </div>
+            {propZone("prop-anySeven", "prop:anySeven", "ANY 7", PROP_PAYOUT.anySeven)}
+            <div className="grid grid-cols-2 gap-2">
+              {propZone("hard-4", "hard:4", "HARD 4", HARD_PAYOUT[4])}
+              {propZone("hard-6", "hard:6", "HARD 6", HARD_PAYOUT[6])}
+              {propZone("hard-8", "hard:8", "HARD 8", HARD_PAYOUT[8])}
+              {propZone("hard-10", "hard:10", "HARD 10", HARD_PAYOUT[10])}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {propZone("prop-aces", "prop:aces", "ACES 2", PROP_PAYOUT.aces)}
+              {propZone("prop-yo", "prop:yo", "YO 11", PROP_PAYOUT.yo)}
+              {propZone("prop-boxcars", "prop:boxcars", "BOX 12", PROP_PAYOUT.boxcars)}
+            </div>
+            {propZone("prop-anyCraps", "prop:anyCraps", "ANY CRAPS", PROP_PAYOUT.anyCraps)}
           </div>
-          <div
-            id="dontPassOdds"
-            className={cls("dontPassOdds", "bet dark h-10 w-24 flex items-center justify-center rounded-lg")}
-            onClick={(e) => { e.stopPropagation(); placeBet("dontPassOdds"); }}
-          >
-            <span className="lbl text-[10px] tracking-wider text-rose-200/80">LAY ODDS</span>
-            <ChipStack items={[{ v: bets.dontPassOdds, odds: true }]} />
-          </div>
-          <ChipStack items={[{ v: bets.dontPass }]} />
-        </div>
-
-        {/* pass line + take odds */}
-        <div
-          id="passLine"
-          className={cls("passLine", "bet h-16 flex items-center justify-between px-4")}
-          onClick={() => placeBet("passLine")}
-        >
-          <div className="lbl">
-            <div className="display-font text-lg tracking-[.16em] text-[color:var(--gold)]">PASS LINE</div>
-            <div className="text-[10px] text-emerald-200/60">wins 7·11 · loses 2·3·12 · sets point</div>
-          </div>
-          <div
-            id="passOdds"
-            className={cls("passOdds", "bet h-11 w-24 flex items-center justify-center rounded-lg")}
-            onClick={(e) => { e.stopPropagation(); placeBet("passOdds"); }}
-          >
-            <span className="lbl text-[10px] tracking-wider text-emerald-100/80">TAKE ODDS</span>
-            <ChipStack items={[{ v: bets.passOdds, odds: true }]} />
-          </div>
-          <ChipStack items={[{ v: bets.passLine }]} />
         </div>
 
         {/* dice + odds hint */}

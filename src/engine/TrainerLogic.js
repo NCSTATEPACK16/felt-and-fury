@@ -3,7 +3,7 @@
 // player should perform next. Fully decoupled from the UI — the Table reads
 // the first task to draw a highlight, and the store reads it to validate clicks.
 
-import { BOXES } from "./CrapsMath.js";
+import { BOXES, formatMoney } from "./CrapsMath.js";
 
 const META = {
   molly: {
@@ -42,6 +42,58 @@ export function getTasks(state) {
 export function nextTask(state) {
   const t = getTasks(state);
   return t.length ? t[0] : null;
+}
+
+/**
+ * Judge a single chip placement against the active strategy — used by the store
+ * to flag accuracy and decide whether to warn. Unlike the step-by-step guidance,
+ * this is permissive about *increasing* bets: topping up your baseline line bet,
+ * its odds, or odds on an existing Come / Don't Come number is always on-strategy
+ * (no warning). The only deviations flagged are:
+ *   1. Placing on an area the strategy never uses (wrong side, props, etc.).
+ *   2. A "future" Come / Don't Come wager that strays *bigger* than the line
+ *      baseline — e.g. a Don't Come larger than the Don't Pass bar in Dolly.
+ *
+ * @param {{mode:string, point:number|null, bets:object}} state
+ * @param {string} area  the bet area being clicked
+ * @param {number} chip  the chip amount about to be placed
+ * @returns {{onStrategy:boolean, warning:string}}
+ */
+export function evaluatePlacement(state, area, chip = 0) {
+  const { mode, bets } = state;
+  if (mode !== "molly" && mode !== "dolly") return { onStrategy: true, warning: "" };
+
+  const right = mode === "molly";
+  const baselineKey = right ? "passLine" : "dontPass";
+  const baselineOddsKey = right ? "passOdds" : "dontPassOdds";
+  const lineKey = right ? "come" : "dontCome";
+  const boxOddsPrefix = right ? "comeOdds:" : "dcOdds:";
+  const baselineLabel = right ? "Pass Line" : "Don't Pass";
+  const lineLabel = right ? "Come" : "Don't Come";
+
+  // Increasing the baseline, its odds, or odds on an established number: always fine.
+  if (area === baselineKey || area === baselineOddsKey) return { onStrategy: true, warning: "" };
+  if (area.startsWith(boxOddsPrefix)) return { onStrategy: true, warning: "" };
+
+  // A new working number via the Come / Don't Come line.
+  if (area === lineKey) {
+    const baseline = bets[baselineKey];
+    if (baseline <= 0)
+      return { onStrategy: false, warning: `Put your baseline on ${baselineLabel} before adding a ${lineLabel} bet.` };
+    if (bets[lineKey] + chip > baseline)
+      return {
+        onStrategy: false,
+        warning: `${lineLabel} is straying past your ${baselineLabel} baseline of ${formatMoney(baseline)} — keep new numbers at or under the line bet.`,
+      };
+    return { onStrategy: true, warning: "" };
+  }
+
+  // Anything else is off the strategy entirely.
+  const meta = getTrainerMeta(mode);
+  return {
+    onStrategy: false,
+    warning: `Off-strategy for ${meta ? meta.title : "this trainer"}: stick to ${baselineLabel}, ${lineLabel}, and odds.`,
+  };
 }
 
 // ---- Three Point Molly (right side) ----

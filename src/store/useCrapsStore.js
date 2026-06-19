@@ -5,10 +5,10 @@
 
 import { create } from "zustand";
 import {
-  BOXES, START_BANKROLL, MAX_SPOT, MAX_ODDS_MULT,
+  BOXES, HARDS, PROP_KEYS, START_BANKROLL, MAX_SPOT, MAX_ODDS_MULT,
   emptyBets, cloneBets, atRisk, resolveRoll, rollDice, round2, formatMoney,
 } from "../engine/CrapsMath.js";
-import { nextTask } from "../engine/TrainerLogic.js";
+import { nextTask, evaluatePlacement } from "../engine/TrainerLogic.js";
 
 const ROLL_MS = 620;
 let toastSeq = 0;
@@ -76,17 +76,19 @@ export const useCrapsStore = create((set, get) => ({
   placeBet: (area) => {
     const s = get();
 
-    // trainer enforcement: warn on deviation, count toward accuracy, still allow.
+    const res = applyPlacement(s, area);
+    if (!res.ok) { get().pushToast(res.msg, "warn"); return false; }
+
+    // trainer feedback on a *successful* placement: increasing strategy bets is
+    // allowed silently; only genuine deviations count against accuracy and warn.
+    let trainer = {};
     if (s.mode !== "manual") {
-      const nt = nextTask(s);
-      const onPath = nt && nt.action !== "roll" && nt.area === area;
-      set({ actions: s.actions + 1, correct: s.correct + (onPath ? 1 : 0) });
-      if (!onPath) get().pushToast("Off-strategy: " + (nt ? nt.warning || nt.text : "follow the highlighted area."), "warn");
+      const verdict = evaluatePlacement(s, area, s.chip);
+      trainer = { actions: s.actions + 1, correct: s.correct + (verdict.onStrategy ? 1 : 0) };
+      if (!verdict.onStrategy) get().pushToast(verdict.warning, "warn");
     }
 
-    const res = applyPlacement(get(), area);
-    if (!res.ok) { get().pushToast(res.msg, "warn"); return false; }
-    set({ bankroll: res.bankroll, bets: res.bets, undoStack: res.undoStack });
+    set({ bankroll: res.bankroll, bets: res.bets, undoStack: res.undoStack, ...trainer });
     return true;
   },
 
@@ -245,6 +247,14 @@ function applyPlacement(s, area) {
     if (!BOXES.includes(n) || bets.dcNum[n] <= 0) return fail(`You need a Don't Come point behind ${n} first.`);
     if (bets.dcOdds[n] + chip > bets.dcNum[n] * MAX_ODDS_MULT) return fail(`Max ${MAX_ODDS_MULT}x lay odds.`);
     r = commit("dcOdds", n, chip);
+  } else if (area.startsWith("hard:")) {
+    const hn = Number(area.split(":")[1]);
+    if (!HARDS.includes(hn)) return fail("That hardway isn't available.");
+    r = commit("hard", hn, chip);
+  } else if (area.startsWith("prop:")) {
+    const key = area.split(":")[1];
+    if (!PROP_KEYS.includes(key)) return fail("Unknown proposition bet.");
+    r = commit("prop", key, chip);
   } else {
     return fail("That area can't take a chip right now.");
   }

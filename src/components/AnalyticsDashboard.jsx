@@ -114,10 +114,15 @@ export default function AnalyticsDashboard() {
           emptyMsg="Finish a full game (come-out through 7-out) and its net win or loss lands here, so you can see whether your strategy is trending up or down."
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={gameData} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+            <BarChart data={gameData} margin={{ top: 8, right: 8, left: 6, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.07)" vertical={false} />
               <XAxis dataKey="name" tick={{ fill: AXIS, fontSize: 12 }} stroke="rgba(255,255,255,.2)" />
-              <YAxis tick={{ fill: AXIS, fontSize: 12 }} stroke="rgba(255,255,255,.2)" />
+              <YAxis
+                tick={{ fill: AXIS, fontSize: 12 }}
+                stroke="rgba(255,255,255,.2)"
+                width={64}
+                tickFormatter={(v) => formatMoney(v)}
+              />
               <Tooltip
                 contentStyle={tooltipStyle}
                 cursor={{ fill: "rgba(255,255,255,.05)" }}
