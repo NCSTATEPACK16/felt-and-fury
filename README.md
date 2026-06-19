@@ -54,6 +54,10 @@ React/DOM imports, so the rules are unit-testable in plain Node (see *Validation
 - Odds are capped at **5×** the flat they back; table max **$500/spot**; min chip **$5**.
 - **All odds work on every roll, including the come-out** — a casino-selectable rule chosen here
   to keep resolution deterministic and the trainer logic clean.
+- **Center-table props:** Hardways pay true **7:1** (hard 4/10) and **9:1** (hard 6/8) — multi-roll,
+  they ride on a hard hit and come down on the easy number or any 7 (working on every roll, same rule
+  as odds). One-roll bets resolve the next roll and come down: Any Craps **7:1**, Yo-11 **15:1**,
+  Aces (2) / Boxcars (12) **30:1**, Any Seven **4:1**.
 
 ## Trainer behavior
 - The guidance card shows the next required action with an **ACT** / **ROLL** badge and the *why*.

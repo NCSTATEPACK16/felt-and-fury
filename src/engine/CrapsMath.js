@@ -4,10 +4,19 @@
 // testable in isolation (see the Monte-Carlo notes in the README).
 
 export const BOXES = [4, 5, 6, 8, 9, 10];
+export const HARDS = [4, 6, 8, 10];
 export const START_BANKROLL = 1000;
 export const MIN_BET = 5;
 export const MAX_SPOT = 500;     // table max per individual spot
 export const MAX_ODDS_MULT = 5;  // cap odds at 5x the flat bet they back
+
+// ---- center-table proposition bets ----
+// Hardways are multi-roll: they ride until the number rolls hard (win), or the
+// number rolls easy / a 7 shows (lose). Payout is profit-to-1.
+export const HARD_PAYOUT = { 4: 7, 10: 7, 6: 9, 8: 9 };
+// One-roll bets resolve on the very next roll. Keys map to profit-to-1 payouts.
+export const PROP_KEYS = ["anyCraps", "yo", "aces", "boxcars", "anySeven"];
+export const PROP_PAYOUT = { anyCraps: 7, yo: 15, aces: 30, boxcars: 30, anySeven: 4 };
 
 export const round2 = (x) => Math.round(x * 100) / 100;
 
@@ -29,6 +38,8 @@ export function emptyBets() {
     comeOdds: { 4: 0, 5: 0, 6: 0, 8: 0, 9: 0, 10: 0 },
     dcNum: { 4: 0, 5: 0, 6: 0, 8: 0, 9: 0, 10: 0 },
     dcOdds: { 4: 0, 5: 0, 6: 0, 8: 0, 9: 0, 10: 0 },
+    hard: { 4: 0, 6: 0, 8: 0, 10: 0 },             // hardway bets (multi-roll)
+    prop: { anyCraps: 0, yo: 0, aces: 0, boxcars: 0, anySeven: 0 }, // one-roll bets
   };
 }
 
@@ -39,12 +50,15 @@ export function cloneBets(b) {
     come: b.come, dontCome: b.dontCome,
     comeNum: { ...b.comeNum }, comeOdds: { ...b.comeOdds },
     dcNum: { ...b.dcNum }, dcOdds: { ...b.dcOdds },
+    hard: { ...b.hard }, prop: { ...b.prop },
   };
 }
 
 export function atRisk(b) {
   let t = b.passLine + b.passOdds + b.dontPass + b.dontPassOdds + b.come + b.dontCome;
   for (const n of BOXES) t += b.comeNum[n] + b.comeOdds[n] + b.dcNum[n] + b.dcOdds[n];
+  for (const n of HARDS) t += b.hard[n];
+  for (const k of PROP_KEYS) t += b.prop[k];
   return round2(t);
 }
 
@@ -122,6 +136,34 @@ export function resolveRoll(prev, d1, d2) {
       b.dcNum[T] = 0; b.dcOdds[T] = 0;
     }
   }
+
+  // ---- 1b) center-table proposition bets ----
+  // Hardways are multi-roll: a hard hit pays and rides (stays working); the easy
+  // version of the number or any 7 takes it down. House rule (consistent with
+  // odds): hardways work on every roll, including the come-out.
+  for (const n of HARDS) {
+    if (b.hard[n] <= 0) continue;
+    if (T === n && d1 === d2) {
+      winRide("hard-" + n, b.hard[n] * HARD_PAYOUT[n]);   // hit hard — profit paid, principal stays
+    } else if (T === 7 || T === n) {
+      lose("hard-" + n, b.hard[n]);                       // any 7, or the number the easy way
+      b.hard[n] = 0;
+    }
+    // else: no decision, the bet stays up
+  }
+
+  // One-roll bets resolve every roll and come down — re-place to keep them working.
+  const oneRoll = (key, hit) => {
+    if (b.prop[key] <= 0) return;
+    if (hit) win("prop-" + key, b.prop[key], b.prop[key] * PROP_PAYOUT[key]);
+    else lose("prop-" + key, b.prop[key]);
+    b.prop[key] = 0;
+  };
+  oneRoll("anyCraps", T === 2 || T === 3 || T === 12);
+  oneRoll("yo", T === 11);
+  oneRoll("aces", T === 2);
+  oneRoll("boxcars", T === 12);
+  oneRoll("anySeven", T === 7);
 
   // ---- 2) pending Come / Don't Come on the line ----
   if (b.come > 0) {
